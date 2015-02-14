@@ -15,17 +15,25 @@ namespace maja
   bwt_encoder::bwt_encoder(const std::string& input) : text(input)
   {
   }
+  
+  std::string bwt_encoder::apply(const std::string& input)
+  {
+    text = input;
+    return (*this)();
+  }
 
   std::string bwt_encoder::operator()()
   {
     initialize();
-    std::deque<permutation> sorted = perms;
+    std::deque<permutation> sorted = perms; // derived strings sorted lexicographically
 
     auto compare_fn = std::bind(&bwt_encoder::compare, this, std::placeholders::_1, std::placeholders::_2);
     std::sort(sorted.begin(), sorted.end(), compare_fn);
 
     std::stringstream ss;
     size_t i;
+    
+    /* Get the line whose string is the input string */
     for(i = 0; i < sorted.size(); ++i)
     {
       if(sorted[i].num == 0)
@@ -34,6 +42,7 @@ namespace maja
 
     ss.write(reinterpret_cast<const char*>(&i), sizeof(i));
 
+    /* Get the last character of each string */
     for(auto it = sorted.begin(); it != sorted.end(); ++it)
     {
       ss.put(text[(it->size - 1 + it->num) % it->size]);
@@ -95,6 +104,12 @@ namespace maja
   {
   }
   
+  std::string bwt_decoder::apply(const std::string& input)
+  {
+    text = input;
+    return (*this)();
+  }
+  
   std::string bwt_decoder::operator()()
   {
     initialize();
@@ -120,8 +135,9 @@ namespace maja
   void bwt_decoder::initialize()
   {
     std::stringstream ss(text);
-    ss.read(reinterpret_cast<char*>(&position), sizeof(position));
     
+    /* Get the line number of the original string and then the BWT result */
+    ss.read(reinterpret_cast<char*>(&position), sizeof(position));
     text = ss.str().substr(sizeof(position));
     
     first = text;
@@ -134,10 +150,13 @@ namespace maja
       size_t pos_in_vec;
       size_t n;
       
+      /* Get n (integer) where first[n] == text[i] */
       do
       {
-        pos = first.find_first_of(text[i], pos); /*n | f(n) = l(i)*/
+        pos = first.find_first_of(text[i], pos);
         n = pos;
+        
+        /* position in the transform vector */
         pos_in_vec = static_cast<size_t>(std::find(vec.begin(), vec.end(), n) - vec.begin());
         
         ++pos;
